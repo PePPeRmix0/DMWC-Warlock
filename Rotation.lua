@@ -6,6 +6,7 @@ local Player, Pet, Buff, Debuff, Spell, Target, Talent, Item, GCD, CDs, HUD, Ene
 local WandTime = GetTime()
 local PetAttackTime = GetTime()
 local ItemUsage = GetTime()
+local Unlocked = DMW.Functions.Unlocked
 
 local function GetCurse()
     local CurseSetting = Setting("Curse")
@@ -53,11 +54,11 @@ local function Shards(Max)
     Max = Max or 99
     local Count = 0
     for Bag = 0, 4, 1 do
-        for Slot = 1, GetContainerNumSlots(Bag), 1 do
-            local ItemID = GetContainerItemID(Bag, Slot)
+        for Slot = 1, C_Container.GetContainerNumSlots(Bag), 1 do
+            local ItemID = C_Container.GetContainerItemID(Bag, Slot)
             if ItemID and ItemID == 6265 then
                 if Count >= Max and Setting("Auto Delete Shards") then
-                    PickupContainerItem(Bag, Slot)
+                    C_Container.PickupContainerItem(Bag, Slot)
                     DeleteCursorItem()
                 else
                     Count = Count + 1
@@ -70,13 +71,13 @@ end
 
 local function Wand()
     if not Player.Moving and not DMW.Helpers.Queue.Spell and not IsAutoRepeatSpell(Spell.Shoot.SpellName) and (DMW.Time - WandTime) > 0.7 and (Target.Distance > 1 or not Setting("Auto Attack In Melee")) and
-    (Player.PowerPct < 10 or Spell.ShadowBolt:CD() > 2 or ((not Curse or not Spell[Curse]:Known() or Debuff[Curse]:Exist(Target) or Target.TTD < 10 or Target.CreatureType == "Totem") and 
+    --[[(Player.PowerPct < 10 or Spell.ShadowBolt:CD() > 2 or ((not Curse or not Spell[Curse]:Known() or Debuff[Curse]:Exist(Target) or Target.TTD < 10 or Target.CreatureType == "Totem") and 
     (not Setting("Immolate") or not Spell.Immolate:Known() or Debuff.Immolate:Exist(Target) or Target.TTD < 10 or Target.CreatureType == "Totem") and 
     (not Setting("Corruption") or not Spell.Corruption:Known() or Debuff.Corruption:Exist(Target) or Target.TTD < 7 or Target.CreatureType == "Totem") and
     (not Setting("Siphon Life") or not Spell.SiphonLife:Known() or Debuff.SiphonLife:Exist(Target) or Target.TTD < 10 or Target.CreatureType == "Totem") and
     (Setting("Shadow Bolt Mode") == 1 or not Spell.ShadowBolt:Known() or Player.PowerPct < Setting("Shadow Bolt Mana") or Target.TTD < Spell.ShadowBolt:CastTime()) and
     (not Setting("Drain Life Filler") or not Spell.DrainLife:Known() or Player.HP > Setting("Drain Life Filler HP") or Target.CreatureType == "Mechanical" or (not Target.Player and Target.TTD < 3) or Target.Distance > Spell.DrainLife.MaxRange)))
-    and Spell.Shoot:Cast(Target) then
+    and]] Spell.Shoot:Cast(Target) then
         WandTime = DMW.Time
         return true
     end
@@ -179,14 +180,14 @@ local function MultiDot()
     end
     if Setting("Cycle Corruption") and Setting("Corruption") and (not Player.Moving or Talent.ImprovedCorruption.Rank == 5) and Debuff.Corruption:Count() < Setting("Multidot Limit") then
         for _, Unit in ipairs(Enemy30Y) do
-            if (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not UnitIsUnit(Spell.Corruption.LastBotTarget, Unit.Pointer)) and Unit.CreatureType ~= "Totem" and (Unit.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Unit) and Unit.TTD > 7 and ((Setting("Multi Dot Corruption Rank 1") and Spell.Corruption:Cast(Unit, 1)) or Spell.Corruption:Cast(Unit)) then
+            if (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not Unlocked.UnitIsUnit(Spell.Corruption.LastBotTarget, Unit.Pointer)) and Unit.CreatureType ~= "Totem" and (Unit.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Unit) and Unit.TTD > 7 and ((Setting("Multi Dot Corruption Rank 1") and Spell.Corruption:Cast(Unit, 1)) or Spell.Corruption:Cast(Unit)) then
                 return true
             end
         end
     end
     if Setting("Immolate") and Setting("Cycle Immolate") and not Player.Moving and Debuff.Immolate:Count() < Setting("Multidot Limit") then
         for _, Unit in ipairs(Enemy30Y) do
-            if (not Spell.Immolate:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not UnitIsUnit(Spell.Immolate.LastBotTarget, Unit.Pointer)) and Unit.CreatureType ~= "Totem" and Unit.Facing and not Debuff.Immolate:Exist(Unit) and Unit.TTD > 10 and Spell.Immolate:Cast(Unit) then
+            if (not Spell.Immolate:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not Unlocked.UnitIsUnit(Spell.Immolate.LastBotTarget, Unit.Pointer)) and Unit.CreatureType ~= "Totem" and Unit.Facing and not Debuff.Immolate:Exist(Unit) and Unit.TTD > 10 and Spell.Immolate:Cast(Unit) then
                 return true
             end
         end
@@ -195,7 +196,7 @@ end
 
 local function Dot()
     if (Player.Level - Target.Level) > 30 and not Target:IsBoss() and Target.CreatureType ~= "Totem" and Setting("Corruption") then
-        if (not Player.Moving or Talent.ImprovedCorruption.Rank == 5) and (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not UnitIsUnit(Spell.Corruption.LastBotTarget, Target.Pointer)) and (Target.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Target) and Spell.Corruption:Cast(Target) then
+        if (not Player.Moving or Talent.ImprovedCorruption.Rank == 5) and (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not Unlocked.UnitIsUnit(Spell.Corruption.LastBotTarget, Target.Pointer)) and (Target.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Target) and Spell.Corruption:Cast(Target) then
             return true
         end
         return true
@@ -211,10 +212,10 @@ local function Dot()
             return true
         end
     end
-    if Setting("Corruption") and (not Player.Moving or Talent.ImprovedCorruption.Rank == 5) and (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not UnitIsUnit(Spell.Corruption.LastBotTarget, Target.Pointer)) and Target.CreatureType ~= "Totem" and (Target.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Target) and Target.TTD > 7 and Spell.Corruption:Cast(Target) then
+    if Setting("Corruption") and (not Player.Moving or Talent.ImprovedCorruption.Rank == 5) and (not Spell.Corruption:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not Unlocked.UnitIsUnit(Spell.Corruption.LastBotTarget, Target.Pointer)) and Target.CreatureType ~= "Totem" and (Target.Facing or (Talent.ImprovedCorruption.Rank == 5 and DMW.Settings.profile.Enemy.AutoFace)) and not Debuff.Corruption:Exist(Target) and Target.TTD > 7 and Spell.Corruption:Cast(Target) then
         return true
     end
-    if (Setting("Immolate") or Spell.ShadowBolt:CD() > 2) and not Player.Moving and (not Spell.Immolate:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not UnitIsUnit(Spell.Immolate.LastBotTarget, Target.Pointer)) and Target.CreatureType ~= "Totem" and Target.Facing and not Debuff.Immolate:Exist(Target) and Target.TTD > 10 and Spell.Immolate:Cast(Target) then
+    if (Setting("Immolate") or Spell.ShadowBolt:CD() > 2) and not Player.Moving and (not Spell.Immolate:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7) or not Unlocked.UnitIsUnit(Spell.Immolate.LastBotTarget, Target.Pointer)) and Target.CreatureType ~= "Totem" --[[and Target.Facing]] and not Debuff.Immolate:Exist(Target) and Target.TTD > 10 and Spell.Immolate:Cast(Target) then
         return true
     end
 end
@@ -242,7 +243,8 @@ local function PvE()
     end
     if not Player.Moving and not Target.Player and Setting("Drain Soul Snipe") and (not Setting("Stop DS At Max Shards") or ShardCount < Setting("Max Shards")) and (not Player.Casting or (Player.Casting ~= Spell.DrainSoul.SpellName and Player.Casting ~= Spell.Hellfire.SpellName and Player.Casting ~= Spell.RainOfFire.SpellName)) and Spell.DrainSoul:CD() < 0.2 and Debuff.Shadowburn:Count() == 0 then
         for _, Unit in ipairs(Enemy30Y) do
-            if Unit.Facing and Unit.Level > DMW.Enums.GrayLvl[Player.Level] and not Unit.Player and (Unit.TTD < 3 or Unit.HP < 8) and not Unit:IsBoss() and not UnitIsTapDenied(Unit.Pointer) then
+            if Unit.Facing and Unit.Level >= Player.Level-DMW.Enums.GrayLvl[Player.Level] 
+            and not Unit.Player and (Unit.TTD < 3 or Unit.HP < 8) and not Unit:IsBoss() and not UnitIsTapDenied(Unit.Pointer) then
                 if Spell.DrainSoul:Cast(Unit) then
                     WandTime = DMW.Time
                     return true
@@ -278,12 +280,12 @@ local function PvE()
                 end
             end
         end
-        if Setting("Auto Pet Attack") and Pet and not Pet.Dead and not UnitIsUnit(Target.Pointer, "pettarget") and DMW.Time > (PetAttackTime + 1) then
+        if Setting("Auto Pet Attack") and Pet and not Pet.Dead and not Unlocked.UnitIsUnit(Target.Pointer, "pettarget") and DMW.Time > (PetAttackTime + 1) then
             PetAttackTime = DMW.Time
-            PetAttack()
+            Unlocked.PetAttack()
         end
         if (not DMW.Player.Equipment[18] or (Target.Distance <= 1 and Setting("Auto Attack In Melee"))) and not IsCurrentSpell(Spell.Attack.SpellID) then
-            StartAttack()
+            Unlocked.StartAttack()
         end
         if Dot() then
             return true
@@ -300,19 +302,19 @@ local function PvE()
         if Setting("Fear Solo Farming") and not Player.Moving and Target.TTD > 3 and #DMW.Friends.Units < 2 and not (Target.CreatureType == "Undead" or Target.CreatureType == "Mechanical" or Target.CreatureType == "Totem") and (Setting("Shadow Bolt Mode") ~= 2 or Player.PowerPct < Setting("Shadow Bolt Mana") or Spell.ShadowBolt:LastCast() or (Spell.ShadowBolt:LastCast(2) and (Spell.LifeTap:LastCast() or Spell.DarkPact:LastCast()))) and Debuff.Fear:Count() == 0 and (not Spell.Fear:LastCast() or (DMW.Player.LastCast[1].SuccessTime and (DMW.Time - DMW.Player.LastCast[1].SuccessTime) > 0.7)) and Spell.Fear:Cast(Target) then 
             return true
         end
-        if Setting("Shadow Bolt Mode") == 2 and Target.Facing and (not Player.Moving or Buff.ShadowTrance:Exist(Player)) and Player.PowerPct > Setting("Shadow Bolt Mana") and (Target.TTD > Spell.ShadowBolt:CastTime() or (Target.Distance > 5 and not DMW.Player.Equipment[18])) and Spell.ShadowBolt:Cast(Target) then
+        if Setting("Shadow Bolt Mode") == 2 --[[and Target.Facing]] and (not Player.Moving or Buff.ShadowTrance:Exist(Player)) and Player.PowerPct > Setting("Shadow Bolt Mana") and (Target.TTD > Spell.ShadowBolt:CastTime() or (Target.Distance > 5 and not DMW.Player.Equipment[18])) and Spell.ShadowBolt:Cast(Target) then
             return true
         end
-        if Setting("Shadow Bolt Mode") == 3 and Target.Facing and Player.PowerPct > Setting("Shadow Bolt Mana") and Buff.ShadowTrance:Exist(Player) and Spell.ShadowBolt:Cast(Target) then
+        if Setting("Shadow Bolt Mode") == 3 --[[and Target.Facing]] and Player.PowerPct > Setting("Shadow Bolt Mana") and Buff.ShadowTrance:Exist(Player) and Spell.ShadowBolt:Cast(Target) then
             return true
         end
-        if Setting("Searing Pain") and Target.Facing and not Player.Moving and (Setting("Shadow Bolt Mode") ~= 2 or Spell.ShadowBolt:CD() > 2 or Target.TTD < Spell.ShadowBolt:CastTime()) and Spell.SearingPain:Cast(Target) then
+        if Setting("Searing Pain") --[[and Target.Facing]] and not Player.Moving and (Setting("Shadow Bolt Mode") ~= 2 or Spell.ShadowBolt:CD() > 2 or Target.TTD < Spell.ShadowBolt:CastTime()) and Spell.SearingPain:Cast(Target) then
             return true
         end
         if Setting("Drain Life Filler") and not Player.Moving and Player.HP <= Setting("Drain Life Filler HP") and Target.CreatureType ~= "Mechanical" and (Target.Player or Target.TTD > 3) and Spell.DrainLife:Cast(Target) then
             return true
         end
-        if DMW.Player.Equipment[18] and Target.Facing and Wand() then
+        if DMW.Player.Equipment[18] --[[and Target.Facing]] and Wand() then
             return true
         end
     end
@@ -371,7 +373,8 @@ end
 function Warlock.Rotation()
     Locals()
     OoC()
-    if Target and Target.ValidEnemy and Target.Distance < 40 then
+    if Target and Target.ValidEnemy 
+    and Target.Distance < 40 then
         PvE()
     end
 end
